@@ -5,10 +5,10 @@ from .city_grid import CityGrid
 
 
 class CityGridService():
-    def __init__(grid:CityGrid, event_probability:float=0.05, fire_probability:float=0.4, victim_probability:float=0.4, fire_victim_probability:float=0.2):
+    def __init__(self, grid:CityGrid, event_probability:float=0.05, fire_probability:float=0.4, victim_probability:float=0.4, fire_victim_probability:float=0.2):
         self.grid = grid
         self.event_prob = event_probability
-        
+
         self.fire_prob = fire_probability
         self.victim_prob = victim_probability
         self.fire_victim_prob = fire_victim_probability

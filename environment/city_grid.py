@@ -3,7 +3,7 @@ from .cell import CellState
 
 
 class CityGrid():
-    def __init__(size:int):
+    def __init__(self, size:int):
         self.size = size
         self.grid = [[CellState.NORMAL for _ in range(size)] for _ in range(size)]
     

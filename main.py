@@ -1,45 +1,79 @@
-# main.py — Ponto de entrada, loop principal Pygame
-
 import pygame
 import sys
 
-# Inicializa o pygame
+from environment.cell import CellState
+from environment.city_grid import CityGrid
+from environment.city_grid_service import CityGridService  # ajuste o nome se necessário
+
+# Configurações
+GRID_SIZE = 20
+CELL_SIZE = 30
+WIDTH = GRID_SIZE * CELL_SIZE
+HEIGHT = GRID_SIZE * CELL_SIZE
+
+# Cores
+COLORS = {
+    CellState.NORMAL: (255, 255, 255),
+    CellState.FIRE: (255, 0, 0),
+    CellState.VICTIM: (0, 0, 255),
+    CellState.FIRE_AND_VICTIM: (128, 0, 128),
+    CellState.HOSPITAL: (0, 255, 0)
+}
+
+# Inicialização
 pygame.init()
-
-# Configurações da tela
-largura = 800
-altura = 600
-tela = pygame.display.set_mode((largura, altura))
-pygame.display.set_caption("Loop Principal")
-
-# Controle de FPS
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("City Grid Simulation")
 clock = pygame.time.Clock()
 
-# Variável de controle
-rodando = True
+# Instâncias
+grid = CityGrid(GRID_SIZE)
+service = CityGridService(grid)
 
 # Loop principal
-while rodando:
-    # 1. Captura de eventos
-    for evento in pygame.event.get():
-        if evento.type == pygame.QUIT:
-            rodando = False
+running = True
+while running:
+    # Eventos
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
 
-    # 2. Atualização (lógica do jogo)
-    # Aqui você atualiza posições, física, etc.
+        # Clique do mouse para interagir
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            mx, my = pygame.mouse.get_pos()
+            x = mx // CELL_SIZE
+            y = my // CELL_SIZE
 
-    # 3. Renderização (desenho na tela)
-    tela.fill((0, 0, 0))  # limpa a tela com preto
+            # Botão esquerdo → fogo
+            if event.button == 1:
+                service.spawn_fire(x, y)
+            # Botão direito → vítima
+            elif event.button == 3:
+                service.spawn_victim(x, y)
 
-    # Exemplo: desenhar algo
-    pygame.draw.circle(tela, (255, 0, 0), (400, 300), 50)
+    # Atualização automática
+    service.update()
 
-    # Atualiza a tela
+    # Desenho
+    screen.fill((0, 0, 0))
+
+    for y in range(grid.get_size()):
+        for x in range(grid.get_size()):
+            state = grid.get_cell_state(x, y)
+            color = COLORS[state]
+
+            rect = pygame.Rect(
+                x * CELL_SIZE,
+                y * CELL_SIZE,
+                CELL_SIZE,
+                CELL_SIZE
+            )
+
+            pygame.draw.rect(screen, color, rect)
+            pygame.draw.rect(screen, (50, 50, 50), rect, 1)  # grid
+
     pygame.display.flip()
+    clock.tick(10)  # FPS mais baixo pra ver a simulação
 
-    # Define FPS (ex: 60)
-    clock.tick(60)
-
-# Finaliza o pygame
 pygame.quit()
 sys.exit()
