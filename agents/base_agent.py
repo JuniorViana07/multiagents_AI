@@ -24,11 +24,11 @@ class BaseAgent():
         elif direction == 'right':
             self.pos_x += 1
     
-    def send_message():
-        pass  # Implementar lógica de comunicação entre agentes
+    def send_message(self, agent:BaseAgent, message:str):
+        agent.receive_message(message)
 
-    def receive_message():
+    def receive_message(self):
         pass  # Implementar lógica de recepção de mensagens
     
-    def perceive_environment():
+    def perceive_environment(self):
         pass  # Implementar lógica de percepção do ambiente
