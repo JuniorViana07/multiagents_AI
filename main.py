@@ -5,6 +5,9 @@ from environment.cell import CellState
 from environment.city_grid import CityGrid
 from environment.city_grid_service import CityGridService  # ajuste o nome se necessário
 
+from agents.drone import Drone
+
+
 # Configurações
 GRID_SIZE = 20
 CELL_SIZE = 30
@@ -29,6 +32,9 @@ clock = pygame.time.Clock()
 # Instâncias
 grid = CityGrid(GRID_SIZE)
 service = CityGridService(grid)
+
+# Inicializando agentes
+drone1 = Drone(id=1, pos_x=5, pos_y=5, view_range=3)
 
 # Loop principal
 running = True
@@ -57,6 +63,7 @@ while running:
     # Desenho
     screen.fill((0, 0, 0))
 
+    # Desenha a grid
     for y in range(grid.get_size()):
         for x in range(grid.get_size()):
             state = grid.get_cell_state(x, y)
@@ -72,6 +79,38 @@ while running:
             pygame.draw.rect(screen, color, rect)
             pygame.draw.rect(screen, (50, 50, 50), rect, 1)  # grid
 
+    ### Desenhando agentes
+    # Drone
+    dx, dy = drone1.get_position()
+
+    center_x = dx * CELL_SIZE + CELL_SIZE // 2
+    center_y = dy * CELL_SIZE + CELL_SIZE // 2
+
+    pygame.draw.circle(
+        screen,
+        (255, 255, 0),  # amarelo
+        (center_x, center_y), # posição central
+        CELL_SIZE // 3 # raio do círculo
+    )
+
+    # Campo de visão do drone
+
+    visible_cells = drone1.perceive_environment(grid)
+
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+
+    for x, y, _ in visible_cells:
+        rect = pygame.Rect(
+            x * CELL_SIZE,
+            y * CELL_SIZE,
+            CELL_SIZE,
+            CELL_SIZE
+        )
+        pygame.draw.rect(overlay, (255, 255, 0, 50), rect)
+
+    screen.blit(overlay, (0, 0))
+
+    
     pygame.display.flip()
     clock.tick(10)  # FPS mais baixo pra ver a simulação
 
