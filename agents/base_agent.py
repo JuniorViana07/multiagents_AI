@@ -24,6 +24,16 @@ class BaseAgent():
         elif direction == 'right':
             self.pos_x += 1
     
+    def move_towards(self, target_x, target_y):
+        if self.pos_x < target_x:
+            self.move('right')
+        elif self.pos_x > target_x:
+            self.move('left')
+        elif self.pos_y < target_y:
+            self.move('down')
+        elif self.pos_y > target_y:
+            self.move('up')
+
     def send_message(self, agent:BaseAgent, message:str):
         agent.receive_message(message)
 
