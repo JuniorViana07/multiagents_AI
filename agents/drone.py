@@ -1,4 +1,5 @@
 # drone.py — Agente Reativo Simples (Drone de Vigilância)
+from agents.base_agent import BaseAgent
 
 class Drone(BaseAgent):
     def __init__(self, id:int, pos_x:int, pos_y:int, view_range:int):

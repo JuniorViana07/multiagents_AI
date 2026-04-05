@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 
 class BaseAgent(ABC):
-    def init(self, id:int, type:str, pos_x:int, pos_y:int):
+    def __init__(self, id:int, type:str, pos_x:int, pos_y:int):
         self.id = id
         self.type = type
         self.pos_x = pos_x
@@ -35,7 +35,7 @@ class BaseAgent(ABC):
         if self.pos_x > target_x:
             self.move('right')
 
-    def send_message(self, agent:BaseAgent, message:str):
+    def send_message(self, agent, message:str):
         agent.receive_message(message)
 
 
