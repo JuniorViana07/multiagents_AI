@@ -18,13 +18,13 @@ class Commander(BaseAgent):
     def generate_desires(self):        # Gera desejos com base nas crenças atuais (ex: se há um incêndio, o desejo é apagá-lo)
         pass
     
-    def generate_intentions(self):      # Gera intenções com base nos desejos (ex: se o desejo é apagar um incêndio, a intenção pode ser enviar um drone para isso)
+    def generate_intentions(self):      # Gera intenções com base nos desejos (ex: se o desejo é apagar um incêndio, a intenção pode ser enviar um bombeiro para isso)
         pass
     
-    def plan_actions(self):            # Planeja ações específicas para alcançar as intenções (ex: escolher qual drone enviar, qual rota seguir)
+    def plan_actions(self):            # Planeja ações específicas para alcançar as intenções (ex: escolher qual agente enviar)
         pass
     
-    def execute_plan(self):            # Executa o plano de ações, enviando comandos para os drones
+    def execute_plan(self):            # Executa o plano de ações, enviando comandos para os agentes
         pass
     
     def perceive_environment(self, grid):
