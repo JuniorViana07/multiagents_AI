@@ -9,6 +9,21 @@ class Drone(BaseAgent):
         pass
 
     def perceive_environment(self, grid):
+        '''
+        Recebe o grid e retorna uma lista de células visíveis dentro do alcance de visão do drone.
+        A visão é circular, ou seja, o drone pode ver todas as células dentro de um círculo de raio view_range ao seu redor.
+        Cada célula é representada como uma tupla (x, y, state).
+
+        Ex.:
+            [
+                (4, 5, CellState.NORMAL),
+                (5, 5, CellState.FIRE),
+                (6, 5, CellState.VICTIM),
+                (5, 6, CellState.NORMAL),
+                (5, 4, CellState.FIRE_AND_VICTIM)
+            ]
+
+        '''
         visible_cells = []
 
         cx, cy = self.get_position()
