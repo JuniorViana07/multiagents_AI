@@ -57,6 +57,3 @@ class RescuerSequential(BaseAgent):
                     self.carrying_victim = False
                     self.victims_rescued += 1
                     self.status = "idle"
-
-
-                
