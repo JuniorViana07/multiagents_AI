@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 
 class BaseAgent(ABC):
-    def __init__(self, id:int, type:str, pos_x:int, pos_y:int):
+    def __init__(self, id:int, type:str, pos_x:int = 0, pos_y:int = 0):
         self.id = id
         self.type = type
         self.pos_x = pos_x
