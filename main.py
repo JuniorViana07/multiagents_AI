@@ -110,9 +110,11 @@ while running:
 
     screen.blit(overlay, (0, 0))
 
+    #funcionamento dos agentes
+    drone1.patrol(grid)
     
     pygame.display.flip()
-    clock.tick(10)  # FPS mais baixo pra ver a simulação
+    clock.tick(5)  # FPS mais baixo pra ver a simulação
 
 pygame.quit()
 sys.exit()

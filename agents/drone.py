@@ -1,10 +1,14 @@
 # drone.py — Agente Reativo Simples (Drone de Vigilância)
 from agents.base_agent import BaseAgent
 
+
 class Drone(BaseAgent):
     def __init__(self, id:int, pos_x:int, pos_y:int, view_range:int):
         super().__init__(id, "drone", pos_x, pos_y)
         self.view_range = view_range
+        self.heading = 'right'  # direção horizontal atual
+        self.vert_dir = 1       # +1 desce, -1 sobe
+        self.vert_steps_left = 0
 
     def receive_message(self, message:str):
         pass
@@ -36,10 +40,47 @@ class Drone(BaseAgent):
                 
                 # Verifica limites da grid
                 if 0 <= x < size and 0 <= y < size:
-                    
-                    # Verifica se está dentro do círculo
-                    if (x - cx) ** 2 + (y - cy) ** 2 <= r ** 2:
-                        state = grid.get_cell_state(x, y)
-                        visible_cells.append((x, y, state))
+                    state = grid.get_cell_state(x, y)
+                    visible_cells.append((x, y, state))
+
 
         return visible_cells
+
+    def patrol(self, grid):
+        cx, cy = self.get_position()
+        size = grid.get_size()
+        step = self.view_range * 2  # total de células a descer/subir na virada
+
+        # --- Modo vertical: ainda tem passos verticais para dar ---
+        if self.vert_steps_left > 0:
+            next_y = cy + (self.view_range + 1) * self.vert_dir
+
+            # Chegou na borda vertical → inverte direção vertical para o retorno
+            if next_y < 0 or next_y >= size:
+                self.vert_dir *= -1
+                self.vert_steps_left = 0
+                return
+
+            self.set_position(cx, cy + self.vert_dir)
+            self.vert_steps_left -= 1
+            return  # não anda horizontalmente enquanto está virando
+
+        # --- Modo horizontal: anda 1 célula na direção atual ---
+        if self.heading == 'right':
+            next_x = cx + self.view_range + 1
+            if next_x < size:
+                self.set_position(cx + 1, cy)
+            else:
+                # Bateu na borda → inicia a descida/subida
+                self.heading = 'left'
+                self.vert_steps_left = step
+
+        elif self.heading == 'left':
+            next_x = cx - self.view_range - 1
+            if next_x >= 0:
+                self.set_position(cx -1, cy)
+            else:
+                # Bateu na borda → inicia a descida/subida
+                self.heading = 'right'
+                self.vert_steps_left = step
+
