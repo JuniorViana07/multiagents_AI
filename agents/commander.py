@@ -6,7 +6,7 @@ class Commander(BaseAgent):
     def __init__(self, id:int):
         super().__init__(id, "commander")
         self.beliefs = {}  # Crenças sobre o ambiente (ex: (x1,y1): incêndio, (x2,y2): vítimas, (x3,y3): normal...)
-        self.desires = {"fire_to_extinguish": set(), "victims_to_save": set()}  # Desejos ou objetivos (ex: apagar incêndios, resgatar vítimas)
+        self.desires = {"fire_to_extinguish": [], "victims_to_save": []}  # Desejos ou objetivos (ex: apagar incêndios, resgatar vítimas)
         self.intentions = [] # Intenções ou planos de ação (ex: enviar bombeiro para apagar fogo, enviar socorrista para resgatar vítima)
     
     def receive_message(self, message: list):
@@ -22,12 +22,16 @@ class Commander(BaseAgent):
         # Gera desejos com base nas crenças atuais (ex: se há um incêndio, o desejo é apagá-lo)
         for key in self.beliefs.keys():
             if self.beliefs[key] in (CellState.FIRE,CellState.FIRE_AND_VICTIM):
-                self.desires["fire_to_extinguish"].add(key)
+                if key not in self.desires["fire_to_extinguish"]:
+                    self.desires["fire_to_extinguish"].append(key)
             if self.beliefs[key] in (CellState.VICTIM,CellState.FIRE_AND_VICTIM):
-                self.desires["victims_to_save"].add(key)
+                if key not in self.desires["victims_to_save"]:
+                    self.desires["victims_to_save"].append(key)
             if self.beliefs[key] == CellState.NORMAL:
-                self.desires["victims_to_save"].discard(key)
-                self.desires["fire_to_extinguish"].discard(key)
+                if key in self.desires["victims_to_save"]:
+                    self.desires["victims_to_save"].remove(key)
+                if key in self.desires["fire_to_extinguish"]:
+                    self.desires["fire_to_extinguish"].remove(key)
 
     
     def generate_intentions(self):      # Gera intenções com base nos desejos (ex: se o desejo é apagar um incêndio, a intenção pode ser enviar um bombeiro para isso)
