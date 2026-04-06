@@ -8,9 +8,11 @@ class Commander(BaseAgent):
         self.desires = []   # Desejos ou objetivos (ex: apagar incêndios, resgatar vítimas)
         self.intentions = [] # Intenções ou planos de ação (ex: enviar bombeiro para apagar fogo, enviar socorrista para resgatar vítima)
     
-    def receive_message(self, message:str):
+    def receive_message(self, message: list):
         # Processa mensagens recebidas dos drones e atualiza crenças, desejos e intenções
-        pass
+        for item in message:
+            self.beliefs[(item[0],item[1])] = item[2]
+
     
     def update_beliefs(self, new_beliefs:dict):        # Atualiza as crenças do comandante com base nas informações recebidas
         self.beliefs.update(new_beliefs)
