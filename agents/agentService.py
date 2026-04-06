@@ -5,5 +5,5 @@ class AgentService():
     def __init__(self):
         pass
 
-    def send_message(sender: BaseAgent, receiver:BaseAgent, message:str):
+    def send_message(self ,sender: BaseAgent, receiver:BaseAgent, message):
         sender.send_message(receiver, message)

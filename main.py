@@ -1,11 +1,13 @@
 import pygame
 import sys
 
+from agents import agentService, commander
 from environment.cell import CellState
 from environment.city_grid import CityGrid
 from environment.city_grid_service import CityGridService  # ajuste o nome se necessário
-
+from agents.agentService import AgentService
 from agents.drone import Drone
+from agents.commander import Commander
 
 
 # Configurações
@@ -32,10 +34,10 @@ clock = pygame.time.Clock()
 # Instâncias
 grid = CityGrid(GRID_SIZE)
 service = CityGridService(grid)
-
+agent_service = AgentService()
 # Inicializando agentes
-drone1 = Drone(id=1, pos_x=5, pos_y=5, view_range=3)
-
+drone1 = Drone(id=1, pos_x=5, pos_y=5, view_range=2)
+commander = Commander(id=2)
 # Loop principal
 running = True
 while running:
@@ -96,7 +98,10 @@ while running:
     # Campo de visão do drone
 
     visible_cells = drone1.perceive_environment(grid)
-
+    agent_service.send_message(drone1, commander, visible_cells)
+    commander.generate_desires()
+    print(commander.desires)
+    print(commander.beliefs)
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
 
     for x, y, _ in visible_cells:
