@@ -1,13 +1,16 @@
 import pygame
 import sys
 
-from agents import agentService, commander
+from agents import agentService, commander, firefighter, rescuer_sequential
+from environment.hospital import Hospital
 from environment.cell import CellState
 from environment.city_grid import CityGrid
 from environment.city_grid_service import CityGridService  # ajuste o nome se necessário
 from agents.agentService import AgentService
 from agents.drone import Drone
 from agents.commander import Commander
+from agents.firefighter import Firefighter
+from agents.rescuer_sequential import RescuerSequential
 
 
 # Configurações
@@ -35,9 +38,12 @@ clock = pygame.time.Clock()
 grid = CityGrid(GRID_SIZE)
 service = CityGridService(grid)
 agent_service = AgentService()
+hospital = Hospital(GRID_SIZE//2, GRID_SIZE//2)
 # Inicializando agentes
 drone1 = Drone(id=1, pos_x=5, pos_y=5, view_range=2)
 commander = Commander(id=2)
+fire_fighter = Firefighter(id=3, pos_x=3, pos_y=3)
+rescuer = RescuerSequential(id=4, pos_x=15, pos_y=15, hospital_pos=hospital.get_position())
 # Loop principal
 running = True
 while running:
@@ -82,6 +88,17 @@ while running:
             pygame.draw.rect(screen, (50, 50, 50), rect, 1)  # grid
 
     ### Desenhando agentes
+    # Hospital
+    hx, hy = hospital.get_position()
+    center_x = hx * CELL_SIZE + CELL_SIZE // 2
+    center_y = hy * CELL_SIZE + CELL_SIZE // 2
+    pygame.draw.circle(
+        screen,
+        (0, 255, 0),  # verde
+        (center_x, center_y), # posição central
+        CELL_SIZE // 3 # raio do círculo
+    )
+
     # Drone
     dx, dy = drone1.get_position()
 
@@ -100,8 +117,8 @@ while running:
     visible_cells = drone1.perceive_environment(grid)
     agent_service.send_message(drone1, commander, visible_cells)
     commander.generate_desires()
-    print(commander.desires)
-    print(commander.beliefs)
+    #print(commander.desires.get("fire_to_extinguish"))
+    #print(commander.beliefs)
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
 
     for x, y, _ in visible_cells:
@@ -115,9 +132,43 @@ while running:
 
     screen.blit(overlay, (0, 0))
 
+    # Bombeiro
+    fx, fy = fire_fighter.get_position()
+    center_x = fx * CELL_SIZE + CELL_SIZE // 2
+    center_y = fy * CELL_SIZE + CELL_SIZE // 2
+    pygame.draw.circle(
+        screen,
+        (0, 255, 255),  # ciano
+        (center_x, center_y), # posição central
+        CELL_SIZE // 3 # raio do círculo
+    )
+    if commander.desires.get("fire_to_extinguish"):
+        agent_service.send_message(commander, fire_fighter, commander.desires.get("fire_to_extinguish")[0])
+    if commander.desires.get("victims_to_save"):
+        agent_service.send_message(commander, rescuer, commander.desires.get("victims_to_save"))
+    # Socorrista
+    rx, ry = rescuer.get_position()
+    center_x = rx * CELL_SIZE + CELL_SIZE // 2
+    center_y = ry * CELL_SIZE + CELL_SIZE // 2
+    pygame.draw.circle(
+        screen,
+        (255, 0, 255),  # magenta
+        (center_x, center_y), # posição central
+        CELL_SIZE // 3 # raio do círculo
+    )
+
     #funcionamento dos agentes
     drone1.patrol(grid)
-    
+    fire_fighter.update(service)
+    rescuer.update(service)
+    print(rescuer.status)
+    print(rescuer.rescue_queue)
+    #print(rescuer.victims_rescued)
+    #print(commander.desires.get("victims_to_save"))
+    #print(commander.desires.get("fire_to_extinguish"))
+    #if rescuer.current_target is not None:
+        #print(rescuer.current_target[0], rescuer.current_target[1])
+
     pygame.display.flip()
     clock.tick(5)  # FPS mais baixo pra ver a simulação
 
