@@ -68,7 +68,7 @@ class Commander(BaseAgent):
 
             self.intentions.append(
                 {
-                    "type": "extinguish_fire", 
+                    "type": "EXTINGUISH_FIRE", 
                     "firefighter": quadrant, 
                     "targets": fires[0]
                 }
@@ -80,12 +80,12 @@ class Commander(BaseAgent):
                 if idle_quadrant is not None:
                     self.intentions.append(
                         {
-                            "type": "extinguish_fire", 
-                            "firefighter": quadrant, 
-                            "targets": fires[1:]
+                            "type": "EXTINGUISH_FIRE", 
+                            "firefighter": idle_quadrant, 
+                            "targets": fires[1]
                         }
                 )
-                
+                    print(f"o bombeiro {idle_quadrant} tá relaxando")
     def _get_quadrant(self, x: int, y: int) -> int:
         half = self.grid_size // 2
         if x < half and y < half:
@@ -130,18 +130,21 @@ class Commander(BaseAgent):
 
     def execute_plan(self):
         """Envia comandos aos agentes com base nas intenções geradas."""
+        #print(f"Commander {self.id} executing plan with intentions: {self.intentions}")
         for intention in self.intentions:
 
             if intention["type"] == "EXTINGUISH_FIRE":
-                quadrant = intention["firefighter_quadrant"]
+                quadrant = intention["firefighter"]
                 firefighter = self.firefighters.get(quadrant)
                 if firefighter:
+                    #print("fire of babylon")
                     firefighter.receive_message({
                         "type": "GO_EXTINGUISH",
-                        "target": intention["target"]
+                        "target": intention["targets"]
                     })
 
             elif intention["type"] == "RESCUE_VICTIMS":
+                #print("ajuda o maluco que tá doente")
                 if intention["rescuer"] == "sequential" and len(self.rescuers) > 0:
                     self.rescuers[0].receive_message(intention["targets"])
                 elif intention["rescuer"] == "optimizer" and len(self.rescuers) > 1:
@@ -150,6 +153,10 @@ class Commander(BaseAgent):
 
     def update(self):
         """Ciclo BDI completo — chamar uma vez por tick."""
+        #print(f"Commander {self.id} updating beliefs, desires, intentions...")
+        #print(f"Current beliefs: {self.beliefs}")
+        #print(f"Current desires: {self.desires}")
+        #print(f"Current intentions: {self.intentions}")
         self.generate_desires()
         self._generate_intentions()
         self.execute_plan()

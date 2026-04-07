@@ -16,7 +16,7 @@ class Firefighter(BaseAgent):
 
     def receive_message(self, message):
         # vai receber o commander.desires.get("fire_to_extinguish") -> um set() de coordenadas.
-        self.target = message
+        self.target = message.get("target")
 
 
     def perceive_environment(self, grid):
@@ -36,6 +36,7 @@ class Firefighter(BaseAgent):
     # movimentação do bombeiro, o bombeiro deve se mover do ponto x,y atual para o ponto x,y do fogo:
     def update(self, grid_service):
         if self.target is None:
+            self.state = "idle"
             return
         
         if self.pos_x == self.target[0] and self.pos_y == self.target[1]:
@@ -50,7 +51,7 @@ class Firefighter(BaseAgent):
                 if self.target is not None:
                     self.state = "moving_to_fire"
             elif self.state == "moving_to_fire":
-                    tx, ty = self.target
+                    tx, ty = self.target[0], self.target[1]
                     self.move_towards(tx, ty)
                     self.steps_taken += 1
                     if self.pos_x == tx and self.pos_y == ty:
