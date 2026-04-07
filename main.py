@@ -12,6 +12,8 @@ from agents.commander import Commander
 from agents.firefighter import Firefighter
 from agents.rescuer_sequential import RescuerSequential
 from agents.rescuer_optimizer import RescuerOptimizer
+from metrics.tracker import MetricsTracker
+from visualization.dashboard import draw_metrics_panel
 
 
 # Configurações
@@ -53,7 +55,8 @@ commander.register_firefighter(1, fire_fighter)
 commander.register_firefighter(2, fire_fighter3)
 commander.register_firefighter(3, fire_fighter2)
 commander.register_firefighter(4, fire_fighter4)
-commander.register_rescuers(rescuer, rescuer_optimizer)
+commander.register_rescuers(rescuer_optimizer) 
+metrics_tracker = MetricsTracker()
 
 # Loop principal
 running = True
@@ -123,11 +126,28 @@ while running:
         CELL_SIZE // 3 # raio do círculo
     )
 
-    # Campo de visão do drone
+    # update nos bombeiros:
+    #result = fire_fighter.update(service)
+    #if result is not None:
+    #    commander.register_extinguished_fire(result)
+    #
+    #result = fire_fighter2.update(service)
+    #if result is not None:
+    #    commander.register_extinguished_fire(result)
 
+    #result = fire_fighter3.update(service)
+    #if result is not None:
+    #    commander.register_extinguished_fire(result)
+
+    #result = fire_fighter4.update(service)
+    #if result is not None:
+    #    commander.register_extinguished_fire(result)
+
+    # Campo de visão do drone
+    drone1.patrol(grid)
     visible_cells = drone1.perceive_environment(grid)
     agent_service.send_message(drone1, commander, visible_cells)
-    commander.update()
+    commander.update(service)
     #print(commander.desires.get("fire_to_extinguish"))
     #print(commander.beliefs)
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
@@ -218,17 +238,17 @@ while running:
         CELL_SIZE // 3 # raio do círculo
     )
     #funcionamento dos agentes
-    drone1.patrol(grid)
-    fire_fighter.update(service)
-    fire_fighter2.update(service)
-    fire_fighter3.update(service)
-    fire_fighter4.update(service)
-    print(f'1:{fire_fighter.state} 2:{fire_fighter2.state}')
-    print(f'1:{fire_fighter.target} 2:{fire_fighter2.target}')
-    print(f'3:{fire_fighter3.state} 4:{fire_fighter4.state}')
-    print(f'3:{fire_fighter3.target} 4:{fire_fighter4.target}')
+ 
+    #print(f'1:{fire_fighter.state} 2:{fire_fighter2.state}')
+    #print(f'1:{fire_fighter.target} 2:{fire_fighter2.target}')
+    #print(f'3:{fire_fighter3.state}')
+    #print(f'3:{fire_fighter3.target}')
+    #print(commander.victims_saved)
+    print(f"Rescuer: {rescuer.rescue_queue}")
+    print(f"Rescuer Optimizer: {rescuer_optimizer.rescue_queue}")
+
+    #print()
     # rescuer.update(service)
-    rescuer_optimizer.update(service) 
     # print(rescuer.status)
     # print(rescuer.rescue_queue)
     #print(rescuer.victims_rescued)
@@ -238,8 +258,8 @@ while running:
         #print(rescuer.current_target[0], rescuer.current_target[1])
 
     # socorrista otimizado
-    
-    
+    metrics = metrics_tracker.snapshot(rescuer, rescuer_optimizer)
+    draw_metrics_panel(screen, metrics, position=(10, 10))
 
 
     pygame.display.flip()

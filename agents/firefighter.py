@@ -16,7 +16,15 @@ class Firefighter(BaseAgent):
 
     def receive_message(self, message):
         # vai receber o commander.desires.get("fire_to_extinguish") -> um set() de coordenadas.
-        self.target = message.get("target")
+        new_target = message.get("target")
+        if new_target is None:
+            return
+
+        # Hardening: não troca de alvo enquanto já estiver executando outro.
+        if self.target is not None and self.target != new_target:
+            return
+
+        self.target = new_target
 
 
     def perceive_environment(self, grid):
@@ -37,22 +45,25 @@ class Firefighter(BaseAgent):
     def update(self, grid_service):
         if self.target is None:
             self.state = "idle"
+            if (self.pos_x, self.pos_y) != self.initial_position:
+                self.move_towards(self.initial_position[0], self.initial_position[1]) # volta para a posição inicial
+                self.steps_taken += 1
             return
-        
-        if self.pos_x == self.target[0] and self.pos_y == self.target[1]:
-            if self.state == "extinguishing":
-                    grid_service.extinguish_fire(self.target[0], self.target[1])
-                    self.state = "idle"
-                    self.target = None
-                    self.move_towards(self.initial_position[0], self.initial_position[1]) # volta para a posição inicial
-                    self.steps_taken += 1
-        else:
-            if self.state == "idle":
-                if self.target is not None:
-                    self.state = "moving_to_fire"
-            elif self.state == "moving_to_fire":
-                    tx, ty = self.target[0], self.target[1]
-                    self.move_towards(tx, ty)
-                    self.steps_taken += 1
-                    if self.pos_x == tx and self.pos_y == ty:
-                        self.state = "extinguishing"
+
+        tx, ty = self.target
+
+        # Extingue de forma robusta ao chegar no alvo, independente do estado anterior.
+        if self.pos_x == tx and self.pos_y == ty:
+            self.state = "extinguishing"
+            extinguished_target = self.target
+            grid_service.extinguish_fire(extinguished_target[0], extinguished_target[1])
+            self.state = "idle"
+            self.target = None
+            return extinguished_target
+
+        self.state = "moving_to_fire"
+        self.move_towards(tx, ty)
+        self.steps_taken += 1
+        if self.pos_x == tx and self.pos_y == ty:
+            self.state = "extinguishing"
+        return None
