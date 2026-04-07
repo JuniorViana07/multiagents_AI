@@ -37,15 +37,24 @@ clock = pygame.time.Clock()
 
 # Instâncias
 grid = CityGrid(GRID_SIZE)
-service = CityGridService(grid, 0)
+service = CityGridService(grid)
 agent_service = AgentService()
 hospital = Hospital(GRID_SIZE//2, GRID_SIZE//2)
 # Inicializando agentes
 drone1 = Drone(id=1, pos_x=5, pos_y=5, view_range=2)
-commander = Commander(id=2)
-fire_fighter = Firefighter(id=3, pos_x=3, pos_y=3)
-# rescuer = RescuerSequential(id=4, pos_x=15, pos_y=15, hospital_pos=hospital.get_position())
+commander = Commander(id=2, grid_size=GRID_SIZE)
+fire_fighter = Firefighter(id=3, pos_x=3, pos_y=3, quadrant=1)
+fire_fighter2 = Firefighter(id=6, pos_x=16, pos_y=16, quadrant=3)
+fire_fighter3 = Firefighter(id=7, pos_x=3, pos_y=16, quadrant=2)
+fire_fighter4 = Firefighter(id=8, pos_x=16, pos_y=3, quadrant=4)
+rescuer = RescuerSequential(id=4, pos_x=15, pos_y=15, hospital_pos=hospital.get_position())
 rescuer_optimizer = RescuerOptimizer(id=5, pos_x=10, pos_y=10, hospital_pos=hospital.get_position())
+commander.register_firefighter(1, fire_fighter)
+commander.register_firefighter(2, fire_fighter3)
+commander.register_firefighter(3, fire_fighter2)
+commander.register_firefighter(4, fire_fighter4)
+commander.register_rescuers(rescuer, rescuer_optimizer)
+
 # Loop principal
 running = True
 while running:
@@ -118,7 +127,7 @@ while running:
 
     visible_cells = drone1.perceive_environment(grid)
     agent_service.send_message(drone1, commander, visible_cells)
-    commander.generate_desires()
+    commander.update()
     #print(commander.desires.get("fire_to_extinguish"))
     #print(commander.beliefs)
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
@@ -144,23 +153,59 @@ while running:
         (center_x, center_y), # posição central
         CELL_SIZE // 3 # raio do círculo
     )
-    if commander.desires.get("fire_to_extinguish"):
-        agent_service.send_message(commander, fire_fighter, commander.desires.get("fire_to_extinguish")[0])
-    # if commander.desires.get("victims_to_save"):
-    #     agent_service.send_message(commander, rescuer, commander.desires.get("victims_to_save"))
-    if commander.desires.get("victims_to_save"):
-        agent_service.send_message(commander, rescuer_optimizer, commander.desires.get("victims_to_save"))
+
+    # Bombeiro 2
+    fx, fy = fire_fighter2.get_position()
+    center_x = fx * CELL_SIZE + CELL_SIZE // 2
+    center_y = fy * CELL_SIZE + CELL_SIZE // 2
+    pygame.draw.circle(
+        screen,
+        (0, 255, 255),  # ciano
+        (center_x, center_y), # posição central
+        CELL_SIZE // 3 # raio do círculo
+    )
+
+
+    # Bombeiro 3
+    fx, fy = fire_fighter3.get_position()
+    center_x = fx * CELL_SIZE + CELL_SIZE // 2
+    center_y = fy * CELL_SIZE + CELL_SIZE // 2
+    pygame.draw.circle(
+        screen,
+        (0, 255, 255),  # ciano
+        (center_x, center_y), # posição central
+        CELL_SIZE // 3 # raio do círculo
+    )
+
+    # Bombeiro 4
+    fx, fy = fire_fighter4.get_position()
+    center_x = fx * CELL_SIZE + CELL_SIZE // 2
+    center_y = fy * CELL_SIZE + CELL_SIZE // 2
+    pygame.draw.circle(
+        screen,
+        (0, 255, 255),  # ciano
+        (center_x, center_y), # posição central
+        CELL_SIZE // 3 # raio do círculo
+    )
+
+
+    # if commander.intentions.get("fire_to_extinguish"):
+    #     agent_service.send_message(commander, fire_fighter, commander.intentions.get("fire_to_extinguish")[0])
+    # if commander.intentions.get("victims_to_save"):
+    #     agent_service.send_message(commander, rescuer, commander.intentions.get("victims_to_save"))
+    # if commander.intentions.get("victims_to_save"):
+    #     agent_service.send_message(commander, rescuer_optimizer, commander.intentions.get("victims_to_save"))
 
     # Socorrista
-    # rx, ry = rescuer.get_position()
-    # center_x = rx * CELL_SIZE + CELL_SIZE // 2
-    # center_y = ry * CELL_SIZE + CELL_SIZE // 2
-    # pygame.draw.circle(
-    #     screen,
-    #     (255, 0, 255),  # magenta
-    #     (center_x, center_y), # posição central
-    #     CELL_SIZE // 3 # raio do círculo
-    # )
+    rx, ry = rescuer.get_position()
+    center_x = rx * CELL_SIZE + CELL_SIZE // 2
+    center_y = ry * CELL_SIZE + CELL_SIZE // 2
+    pygame.draw.circle(
+        screen,
+        (255, 0, 255),  # magenta
+        (center_x, center_y), # posição central
+        CELL_SIZE // 3 # raio do círculo
+    )
 
     # Otimizador
     rox, roy = rescuer_optimizer.get_position()
@@ -175,6 +220,9 @@ while running:
     #funcionamento dos agentes
     drone1.patrol(grid)
     fire_fighter.update(service)
+    fire_fighter2.update(service)
+    fire_fighter3.update(service)
+    fire_fighter4.update(service)
     # rescuer.update(service)
     rescuer_optimizer.update(service) 
     # print(rescuer.status)

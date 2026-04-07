@@ -5,12 +5,13 @@
 from agents.base_agent import BaseAgent
 
 class Firefighter(BaseAgent):
-    def __init__(self, id:int, pos_x:int, pos_y:int):
+    def __init__(self, id:int, pos_x:int, pos_y:int, quadrant:int = 1):
         super().__init__(id, "firefighter", pos_x, pos_y)
         self.state = 'idle' # o bombeiro pode estar "idle" ou "moving_to_fire" ou "extinguishing", importante para a lógica de pedir auxilio para um bombeiro de outro quadrante
-        self.quadrant = 1 #
+        self.quadrant = quadrant
         self.target = None # coordenada do fogo a ser extinto
         self.steps_taken = 0
+        self.initial_position = (pos_x, pos_y)
 
 
     def receive_message(self, message):
@@ -42,6 +43,8 @@ class Firefighter(BaseAgent):
                     grid_service.extinguish_fire(self.target[0], self.target[1])
                     self.state = "idle"
                     self.target = None
+                    self.move_towards(self.initial_position[0], self.initial_position[1]) # volta para a posição inicial
+                    self.steps_taken += 1
         else:
             if self.state == "idle":
                 if self.target is not None:
