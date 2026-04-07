@@ -15,6 +15,9 @@ class Commander(BaseAgent):
 
         self.firefighters = {} # registro dos bombeiros por quadrante
         self.rescuers = None
+        self.extinguished_fires = []
+        self.rescued_victims = []
+        self.active_rescuer = "optimizer"
     
 
     # registros dos agentes bombeiros e socorristas
@@ -23,6 +26,11 @@ class Commander(BaseAgent):
 
     def register_rescuers(self, rescuer_sequential, rescuer_optimizer):
         self.rescuers = [rescuer_sequential, rescuer_optimizer]
+
+    def set_active_rescuer(self, rescuer_mode: str):
+        mode = str(rescuer_mode).strip().lower()
+        if mode in ("sequential", "optimizer"):
+            self.active_rescuer = mode
 
 
     def receive_message(self, message: list):
@@ -33,6 +41,16 @@ class Commander(BaseAgent):
     
     def update_beliefs(self, new_beliefs:dict):        # Atualiza as crenças do comandante com base nas informações recebidas
         self.beliefs.update(new_beliefs)
+
+    def register_extinguished_fire(self, fire: tuple):
+        if fire not in self.extinguished_fires:
+            self.extinguished_fires.append(fire)
+        self.beliefs[fire] = CellState.NORMAL
+
+    def register_rescued_victim(self, victim: tuple):
+        if victim not in self.rescued_victims:
+            self.rescued_victims.append(victim)
+        self.beliefs[victim] = CellState.NORMAL
     
     def generate_desires(self):
         # Gera desejos com base nas crenças atuais (ex: se há um incêndio, o desejo é apagá-lo)
@@ -59,33 +77,48 @@ class Commander(BaseAgent):
     def _generate_fire_intentions(self):      # Gera intenções com base nos desejos (ex: se o desejo é apagar um incêndio, a intenção pode ser enviar um bombeiro para isso)
         fires_by_quadrants = {1: [], 2: [], 3: [], 4: []}
         for fire in self.desires["fire_to_extinguish"]:
+            # verificação se o fogo já não é target de um bombeiro, para evitar enviar dois bombeiros.
+            if any(firefighter.target == fire for firefighter in self.firefighters.values()):
+                continue
             q = self._get_quadrant(fire[0], fire[1])
             fires_by_quadrants[q].append(fire)
 
+        reserved_firefighters = set()
         for quadrant, fires in fires_by_quadrants.items():
             if not fires:
                 continue
 
-            self.intentions.append(
-                {
-                    "type": "extinguish_fire", 
-                    "firefighter": quadrant, 
-                    "targets": fires[0]
-                }
-            ) 
-
-            if len(fires) > 1:
-
-                idle_quadrant = self._find_idle_firefighter(exclude=quadrant)
-                if idle_quadrant is not None:
-                    self.intentions.append(
-                        {
-                            "type": "extinguish_fire", 
-                            "firefighter": quadrant, 
-                            "targets": fires[1:]
-                        }
+            pending_fires = list(fires)
+            firefighter = self.firefighters.get(quadrant)
+            if firefighter and firefighter.target is None:
+                target = pending_fires.pop(0)
+                self.intentions.append(
+                    {
+                        "type": "EXTINGUISH_FIRE",
+                        "firefighter": quadrant,
+                        "targets": target
+                    }
                 )
-                
+                reserved_firefighters.add(quadrant)
+
+            while pending_fires:
+                idle_quadrant = self._find_idle_firefighter(
+                    exclude=quadrant,
+                    reserved=reserved_firefighters
+                )
+                if idle_quadrant is None:
+                    break
+
+                target = pending_fires.pop(0)
+                self.intentions.append(
+                    {
+                        "type": "EXTINGUISH_FIRE",
+                        "firefighter": idle_quadrant,
+                        "targets": target
+                    }
+                )
+                reserved_firefighters.add(idle_quadrant)
+                print(f"o bombeiro {idle_quadrant} tá relaxando")
     def _get_quadrant(self, x: int, y: int) -> int:
         half = self.grid_size // 2
         if x < half and y < half:
@@ -99,57 +132,100 @@ class Commander(BaseAgent):
 
 
     def _generate_rescue_intentions(self):
-        victims = self.desires["victims_to_save"]
+        victims = [
+            victim
+            for victim in self.desires["victims_to_save"]
+            if not self._is_victim_assigned(victim)
+        ]
         if not victims:
             return
 
-        # Divide alternadamente entre os dois socorristas
-        list_sequential = victims[0::2]  # índices pares
-        list_optimizer  = victims[1::2]  # índices ímpares
-
-        if list_sequential:
+        if self.active_rescuer == "sequential":
             self.intentions.append({
                 "type": "RESCUE_VICTIMS",
                 "rescuer": "sequential",
-                "targets": list_sequential
+                "targets": victims
             })
-        if list_optimizer:
+        else:
             self.intentions.append({
                 "type": "RESCUE_VICTIMS",
                 "rescuer": "optimizer",
-                "targets": list_optimizer
+                "targets": victims
             })
 
-    def _find_idle_firefighter(self, exclude: int):
+    def _is_victim_assigned(self, victim: tuple):
+        if not self.rescuers:
+            return False
+
+        for rescuer in self.rescuers:
+            if rescuer.current_target == victim:
+                return True
+
+            if hasattr(rescuer, "queued_victims"):
+                if victim in rescuer.queued_victims:
+                    return True
+            elif victim in rescuer.rescue_queue:
+                return True
+
+        return False
+
+    def _find_idle_firefighter(self, exclude: int, reserved=None):
         """Retorna o quadrante de um bombeiro ocioso, excluindo o quadrante informado."""
+        if reserved is None:
+            reserved = set()
+
         for quadrant, firefighter in self.firefighters.items():
-            if quadrant != exclude and firefighter.state == "idle":
+            if (
+                quadrant != exclude
+                and quadrant not in reserved
+                and firefighter.state == "idle"
+                and firefighter.target is None
+            ):
                 return quadrant
         return None
 
 
     def execute_plan(self):
         """Envia comandos aos agentes com base nas intenções geradas."""
+        #print(f"Commander {self.id} executing plan with intentions: {self.intentions}")
         for intention in self.intentions:
 
             if intention["type"] == "EXTINGUISH_FIRE":
-                quadrant = intention["firefighter_quadrant"]
+                quadrant = intention["firefighter"]
                 firefighter = self.firefighters.get(quadrant)
                 if firefighter:
+                    #print("fire of babylon")
                     firefighter.receive_message({
                         "type": "GO_EXTINGUISH",
-                        "target": intention["target"]
+                        "target": intention["targets"]
                     })
 
             elif intention["type"] == "RESCUE_VICTIMS":
+                #print("ajuda o maluco que tá doente")
                 if intention["rescuer"] == "sequential" and len(self.rescuers) > 0:
                     self.rescuers[0].receive_message(intention["targets"])
                 elif intention["rescuer"] == "optimizer" and len(self.rescuers) > 1:
                     self.rescuers[1].receive_message(intention["targets"])
 
 
-    def update(self):
+    def update(self,service):
         """Ciclo BDI completo — chamar uma vez por tick."""
+        #print(f"Commander {self.id} updating beliefs, desires, intentions...")
+        #print(f"Current beliefs: {self.beliefs}")
+        #print(f"Current desires: {self.desires}")
+        #print(f"Current intentions: {self.intentions}")
+        #verifica se os incêndios que ele tinha como desejo apagar já foram apagados, para atualizar as crenças e desejos.
+        for fire_fighter in self.firefighters.values():
+            result = fire_fighter.update(service)
+            if result is not None:
+                self.register_extinguished_fire(result)
+
+        if self.rescuers:
+            for rescuer in self.rescuers:
+                result = rescuer.update(service)
+                if result is not None:
+                    self.register_rescued_victim(result)
+
         self.generate_desires()
         self._generate_intentions()
         self.execute_plan()
