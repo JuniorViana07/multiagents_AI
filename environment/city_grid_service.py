@@ -32,13 +32,13 @@ class CityGridService():
     def extinguish_fire(self, x:int, y:int):
         if self.grid.get_cell_state(x, y) == CellState.FIRE_AND_VICTIM:
             self.grid.set_cell_state(x, y, CellState.VICTIM)
-        else:
+        if self.grid.get_cell_state(x, y) == CellState.FIRE:
             self.grid.set_cell_state(x, y, CellState.NORMAL)
     
     def rescue_victim(self, x:int, y:int):
         if self.grid.get_cell_state(x, y) == CellState.FIRE_AND_VICTIM:
             self.grid.set_cell_state(x, y, CellState.FIRE)
-        else:
+        if self.grid.get_cell_state(x, y) == CellState.VICTIM:
             self.grid.set_cell_state(x, y, CellState.NORMAL)
 
     def clear_cell(self, x:int, y:int):

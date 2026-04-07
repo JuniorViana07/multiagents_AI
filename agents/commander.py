@@ -35,6 +35,7 @@ class Commander(BaseAgent):
 
     
     def generate_intentions(self):      # Gera intenções com base nos desejos (ex: se o desejo é apagar um incêndio, a intenção pode ser enviar um bombeiro para isso)
+        
         pass
     
     def plan_actions(self):            # Planeja ações específicas para alcançar as intenções (ex: escolher qual agente enviar)

@@ -30,9 +30,9 @@ class BaseAgent(ABC):
             self.move('up')
         if self.pos_y < target_y:
             self.move('down')
-        if self.pos_x < target_x:
-            self.move('left')
         if self.pos_x > target_x:
+            self.move('left')
+        if self.pos_x < target_x:
             self.move('right')
 
     def send_message(self, agent, message:str):
