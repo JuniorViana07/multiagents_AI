@@ -2,8 +2,7 @@
 
 
 from agents.base_agent import BaseAgent
-from collections import deque
-from heapq import heappush, heappop
+from math import sqrt
 from environment.cell import CellState
 
 
@@ -27,22 +26,41 @@ class RescuerOptimizer(BaseAgent):
 
         self.victims_rescued = 0
 
+    def _euclidean_distance(self, target):
+        tx, ty = target
+        return sqrt((self.pos_x - tx) ** 2 + (self.pos_y - ty) ** 2)
+
     def _is_target_rescuable(self, grid_service, target):
         tx, ty = target
         state = grid_service.grid.get_cell_state(tx, ty)
         return state in (CellState.VICTIM, CellState.FIRE_AND_VICTIM)
 
+    def _select_nearest_candidate(self):
+        if not self.rescue_queue:
+            return None
+
+        # Critério determinístico em empate: ordem de chegada na fila
+        candidate = min(
+            self.rescue_queue,
+            key=lambda victim: self._euclidean_distance(victim),
+        )
+        return candidate
+
     def update(self, grid_service):
         if self.status == "idle":
             while self.rescue_queue:
-                # escolhe primeira vítima válida da fila
-                candidate = heappop(self.rescue_queue)[1]
+                candidate = self._select_nearest_candidate()
+                if candidate is None:
+                    break
+
+                # Consome o candidato escolhido para evitar reescolha indevida.
+                self.rescue_queue.remove(candidate)
                 self.queued_victims.discard(candidate)
+
                 if self._is_target_rescuable(grid_service, candidate):
                     self.current_target = candidate
                     self.status = "moving_to_victim"
                     break
-                    
 
         elif self.status == "moving_to_victim":
                 if self.current_target is None:
@@ -92,7 +110,8 @@ class RescuerOptimizer(BaseAgent):
                 if self.pos_x == hx and self.pos_y == hy:
                     self.carrying_victim = False
                     self.victims_rescued += 1
-                    self.status = "idle"         
+                    self.status = "idle"
+                    
         return None
     def receive_message(self, message):
         # vai receber o commander.desires.get("victim_to_rescue") -> um set() de coordenadas.
@@ -101,8 +120,8 @@ class RescuerOptimizer(BaseAgent):
                 continue
             if victim in self.queued_victims:
                 continue
-            distance = abs(self.pos_x - victim[0]) + abs(self.pos_y - victim[1])
-            heappush(self.rescue_queue, (distance, victim))  # Prioriza por distância
+            
+            self.rescue_queue.append(victim)
             self.queued_victims.add(victim)
 
     def perceive_environment(self):

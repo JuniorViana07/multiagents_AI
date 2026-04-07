@@ -14,11 +14,16 @@ from agents.rescuer_sequential import RescuerSequential
 from agents.rescuer_optimizer import RescuerOptimizer
 from metrics.tracker import MetricsTracker
 from visualization.dashboard import draw_metrics_panel
+from config import (
+    GRID_SIZE,
+    CELL_SIZE,
+    FPS,
+    EVENT_PROBABILITY,
+    normalized_event_weights,
+    validated_active_rescuer,
+)
 
 
-# Configurações
-GRID_SIZE = 20
-CELL_SIZE = 30
 WIDTH = GRID_SIZE * CELL_SIZE
 HEIGHT = GRID_SIZE * CELL_SIZE
 
@@ -37,25 +42,50 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("City Grid Simulation")
 clock = pygame.time.Clock()
 
+
+def _scaled_coord(ratio: float) -> int:
+    value = int(round((GRID_SIZE - 1) * ratio))
+    return max(0, min(GRID_SIZE - 1, value))
+
+
+def _scaled_pos(x_ratio: float, y_ratio: float) -> tuple[int, int]:
+    return (_scaled_coord(x_ratio), _scaled_coord(y_ratio))
+
 # Instâncias
 grid = CityGrid(GRID_SIZE)
-service = CityGridService(grid)
+fire_w, victim_w, fire_victim_w = normalized_event_weights()
+service = CityGridService(
+    grid,
+    event_probability=EVENT_PROBABILITY,
+    fire_probability=fire_w,
+    victim_probability=victim_w,
+    fire_victim_probability=fire_victim_w,
+)
 agent_service = AgentService()
 hospital = Hospital(GRID_SIZE//2, GRID_SIZE//2)
 # Inicializando agentes
-drone1 = Drone(id=1, pos_x=5, pos_y=5, view_range=2)
+drone_x, drone_y = _scaled_pos(0.25, 0.25)
+drone1 = Drone(id=1, pos_x=drone_x, pos_y=drone_y, view_range=2)
 commander = Commander(id=2, grid_size=GRID_SIZE)
-fire_fighter = Firefighter(id=3, pos_x=3, pos_y=3, quadrant=1)
-fire_fighter2 = Firefighter(id=6, pos_x=3, pos_y=16, quadrant=3)
-fire_fighter3 = Firefighter(id=7, pos_x=16, pos_y=3, quadrant=2)
-fire_fighter4 = Firefighter(id=8, pos_x=16, pos_y=16, quadrant=4)
-rescuer = RescuerSequential(id=4, pos_x=15, pos_y=15, hospital_pos=hospital.get_position())
-rescuer_optimizer = RescuerOptimizer(id=5, pos_x=10, pos_y=10, hospital_pos=hospital.get_position())
+ff1_x, ff1_y = _scaled_pos(0.15, 0.15)
+ff2_x, ff2_y = _scaled_pos(0.15, 0.80)
+ff3_x, ff3_y = _scaled_pos(0.80, 0.15)
+ff4_x, ff4_y = _scaled_pos(0.80, 0.80)
+resc_seq_x, resc_seq_y = _scaled_pos(0.75, 0.75)
+resc_opt_x, resc_opt_y = _scaled_pos(0.50, 0.50)
+
+fire_fighter = Firefighter(id=3, pos_x=ff1_x, pos_y=ff1_y, quadrant=1)
+fire_fighter2 = Firefighter(id=6, pos_x=ff2_x, pos_y=ff2_y, quadrant=3)
+fire_fighter3 = Firefighter(id=7, pos_x=ff3_x, pos_y=ff3_y, quadrant=2)
+fire_fighter4 = Firefighter(id=8, pos_x=ff4_x, pos_y=ff4_y, quadrant=4)
+rescuer = RescuerSequential(id=4, pos_x=resc_seq_x, pos_y=resc_seq_y, hospital_pos=hospital.get_position())
+rescuer_optimizer = RescuerOptimizer(id=5, pos_x=resc_opt_x, pos_y=resc_opt_y, hospital_pos=hospital.get_position())
 commander.register_firefighter(1, fire_fighter)
 commander.register_firefighter(2, fire_fighter3)
 commander.register_firefighter(3, fire_fighter2)
 commander.register_firefighter(4, fire_fighter4)
-commander.register_rescuers(rescuer_optimizer) 
+commander.register_rescuers(rescuer, rescuer_optimizer)
+commander.set_active_rescuer(validated_active_rescuer())
 metrics_tracker = MetricsTracker()
 
 # Loop principal
@@ -263,7 +293,7 @@ while running:
 
 
     pygame.display.flip()
-    clock.tick(5)  # FPS mais baixo pra ver a simulação
+    clock.tick(FPS)
 
 pygame.quit()
 sys.exit()

@@ -17,15 +17,20 @@ class Commander(BaseAgent):
         self.rescuers = None
         self.extinguished_fires = []
         self.rescued_victims = []
-        self.next_rescuer_turn = "sequential"
+        self.active_rescuer = "optimizer"
     
 
     # registros dos agentes bombeiros e socorristas
     def register_firefighter(self, quadrant_id: int, firefighter):
         self.firefighters[quadrant_id] = firefighter
 
-    def register_rescuers(self, rescuer_optimizer):
-        self.rescuers = [rescuer_optimizer]
+    def register_rescuers(self, rescuer_sequential, rescuer_optimizer):
+        self.rescuers = [rescuer_sequential, rescuer_optimizer]
+
+    def set_active_rescuer(self, rescuer_mode: str):
+        mode = str(rescuer_mode).strip().lower()
+        if mode in ("sequential", "optimizer"):
+            self.active_rescuer = mode
 
 
     def receive_message(self, message: list):
@@ -135,31 +140,17 @@ class Commander(BaseAgent):
         if not victims:
             return
 
-        # Round-robin persistente:
-        # - segue a "vez" global entre sequential/optimizer
-        # - mantém a vez obrigatória mesmo que o rescuer esteja ocupado
-        # - funciona para lote de 1 ou várias vítimas
-        list_sequential = []
-        list_optimizer = []
-        for victim in victims:
-            if self.next_rescuer_turn == "sequential":
-                list_sequential.append(victim)
-                self.next_rescuer_turn = "optimizer"
-            else:
-                list_optimizer.append(victim)
-                self.next_rescuer_turn = "sequential"
-
-        if list_sequential:
+        if self.active_rescuer == "sequential":
             self.intentions.append({
                 "type": "RESCUE_VICTIMS",
                 "rescuer": "sequential",
-                "targets": list_sequential
+                "targets": victims
             })
-        if list_optimizer:
+        else:
             self.intentions.append({
                 "type": "RESCUE_VICTIMS",
                 "rescuer": "optimizer",
-                "targets": list_optimizer
+                "targets": victims
             })
 
     def _is_victim_assigned(self, victim: tuple):
