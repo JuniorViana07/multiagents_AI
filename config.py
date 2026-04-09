@@ -4,13 +4,13 @@ GRID_SIZE = 20
 CELL_SIZE = 30
 FPS = 5
 
-EVENT_PROBABILITY = 0.05
+EVENT_PROBABILITY = 0.5
 FIRE_PROBABILITY = 0.4
 VICTIM_PROBABILITY = 0.4
 FIRE_VICTIM_PROBABILITY = 0.2
 
-# Escolha fixa por execucao: "sequential" ou "optimizer"
-ACTIVE_RESCUER = "optimizer"
+# Escolha fixa por execucao: "sequential", "optimizer" ou "both"
+ACTIVE_RESCUER = "both"
 
 
 def _clamp_non_negative(value: float) -> float:
@@ -31,6 +31,6 @@ def normalized_event_weights() -> tuple[float, float, float]:
 
 def validated_active_rescuer() -> str:
     mode = str(ACTIVE_RESCUER).strip().lower()
-    if mode not in ("sequential", "optimizer"):
+    if mode not in ("sequential", "optimizer", "both"):
         return "optimizer"
     return mode

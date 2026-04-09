@@ -1,3 +1,5 @@
+from turtle import heading
+
 import pygame
 import sys
 
@@ -28,21 +30,30 @@ WIDTH = GRID_SIZE * CELL_SIZE
 HEIGHT = GRID_SIZE * CELL_SIZE
 
 # Cores
-COLORS = {
-    CellState.NORMAL: (255, 255, 255),
-    CellState.FIRE: (255, 0, 0),
-    CellState.VICTIM: (0, 0, 255),
-    CellState.FIRE_AND_VICTIM: (128, 0, 128),
-    CellState.HOSPITAL: (0, 255, 0)
-}
+#COLORS = {
+#    CellState.NORMAL: (255, 255, 255),
+#    CellState.FIRE: (255, 0, 0),
+#    CellState.VICTIM: (0, 0, 255),
+#    CellState.FIRE_AND_VICTIM: (128, 0, 128),
+#    CellState.HOSPITAL: (0, 255, 0)
+#}
 
+# Emojis dos eventos:
+EMOJIS = {
+    CellState.FIRE: "🔥",
+    CellState.VICTIM: "❤️",
+    CellState.FIRE_AND_VICTIM: "❤️‍🔥",
+}
 # Inicialização
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("City Grid Simulation")
 clock = pygame.time.Clock()
 
+# Emojis
+emoji_font = pygame.font.SysFont("Segoe UI Emoji", CELL_SIZE)
 
+#funções auxiliares
 def _scaled_coord(ratio: float) -> int:
     value = int(round((GRID_SIZE - 1) * ratio))
     return max(0, min(GRID_SIZE - 1, value))
@@ -51,7 +62,16 @@ def _scaled_coord(ratio: float) -> int:
 def _scaled_pos(x_ratio: float, y_ratio: float) -> tuple[int, int]:
     return (_scaled_coord(x_ratio), _scaled_coord(y_ratio))
 
-# Instâncias
+def draw_emoji(screen, emoji, grid_x, grid_y):
+    center_x = grid_x * CELL_SIZE + CELL_SIZE // 2
+    center_y = grid_y * CELL_SIZE + CELL_SIZE // 2
+
+    surface = emoji_font.render(emoji, True, (255, 255, 255))
+    rect = surface.get_rect(center=(center_x, center_y))
+
+    screen.blit(surface, rect)
+
+# Instânciando
 grid = CityGrid(GRID_SIZE)
 fire_w, victim_w, fire_victim_w = normalized_event_weights()
 service = CityGridService(
@@ -63,6 +83,7 @@ service = CityGridService(
 )
 agent_service = AgentService()
 hospital = Hospital(GRID_SIZE//2, GRID_SIZE//2)
+
 # Inicializando agentes
 drone_x, drone_y = _scaled_pos(0.25, 0.25)
 drone1 = Drone(id=1, pos_x=drone_x, pos_y=drone_y, view_range=2)
@@ -78,8 +99,9 @@ fire_fighter = Firefighter(id=3, pos_x=ff1_x, pos_y=ff1_y, quadrant=1)
 fire_fighter2 = Firefighter(id=6, pos_x=ff2_x, pos_y=ff2_y, quadrant=3)
 fire_fighter3 = Firefighter(id=7, pos_x=ff3_x, pos_y=ff3_y, quadrant=2)
 fire_fighter4 = Firefighter(id=8, pos_x=ff4_x, pos_y=ff4_y, quadrant=4)
-rescuer = RescuerSequential(id=4, pos_x=resc_seq_x, pos_y=resc_seq_y, hospital_pos=hospital.get_position())
-rescuer_optimizer = RescuerOptimizer(id=5, pos_x=resc_opt_x, pos_y=resc_opt_y, hospital_pos=hospital.get_position())
+rescuer = RescuerSequential(id=4, pos_x=hospital.get_position()[0], pos_y=hospital.get_position()[1], hospital_pos=hospital.get_position())
+rescuer_optimizer = RescuerOptimizer(id=5, pos_x=hospital.get_position()[0], pos_y=hospital.get_position()[1], hospital_pos=hospital.get_position())
+commander.register_drones(drone1)
 commander.register_firefighter(1, fire_fighter)
 commander.register_firefighter(2, fire_fighter3)
 commander.register_firefighter(3, fire_fighter2)
@@ -115,11 +137,12 @@ while running:
     # Desenho
     screen.fill((0, 0, 0))
 
+    grid_overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+
     # Desenha a grid
     for y in range(grid.get_size()):
         for x in range(grid.get_size()):
             state = grid.get_cell_state(x, y)
-            color = COLORS[state]
 
             rect = pygame.Rect(
                 x * CELL_SIZE,
@@ -128,166 +151,72 @@ while running:
                 CELL_SIZE
             )
 
-            pygame.draw.rect(screen, color, rect)
-            pygame.draw.rect(screen, (50, 50, 50), rect, 1)  # grid
+            pygame.draw.rect(screen, (255, 255, 255), rect)
+
+            if state != CellState.NORMAL:
+                emoji = EMOJIS[state]
+                draw_emoji(screen, emoji, x, y)
+
+            # Borda com transparência
+            pygame.draw.rect(grid_overlay, (50, 50, 50, 80), rect, 1)
+
+    # aplica transparência
+    screen.blit(grid_overlay, (0, 0))
 
     ### Desenhando agentes
-    # Hospital
-    hx, hy = hospital.get_position()
-    center_x = hx * CELL_SIZE + CELL_SIZE // 2
-    center_y = hy * CELL_SIZE + CELL_SIZE // 2
-    pygame.draw.circle(
-        screen,
-        (0, 255, 0),  # verde
-        (center_x, center_y), # posição central
-        CELL_SIZE // 3 # raio do círculo
-    )
-
     # Drone
     dx, dy = drone1.get_position()
+    surface = emoji_font.render("🚁", True, (255,255,255))
+    if drone1.heading == "right":
+        surface = pygame.transform.flip(surface, True, False)
+    screen.blit(surface, (dx * CELL_SIZE, dy * CELL_SIZE))    
+    #draw_emoji(screen, "🚁", dx, dy)
 
-    center_x = dx * CELL_SIZE + CELL_SIZE // 2
-    center_y = dy * CELL_SIZE + CELL_SIZE // 2
-
-    pygame.draw.circle(
-        screen,
-        (255, 255, 0),  # amarelo
-        (center_x, center_y), # posição central
-        CELL_SIZE // 3 # raio do círculo
-    )
-
-    # update nos bombeiros:
-    #result = fire_fighter.update(service)
-    #if result is not None:
-    #    commander.register_extinguished_fire(result)
-    #
-    #result = fire_fighter2.update(service)
-    #if result is not None:
-    #    commander.register_extinguished_fire(result)
-
-    #result = fire_fighter3.update(service)
-    #if result is not None:
-    #    commander.register_extinguished_fire(result)
-
-    #result = fire_fighter4.update(service)
-    #if result is not None:
-    #    commander.register_extinguished_fire(result)
-
-    # Campo de visão do drone
-    drone1.patrol(grid)
-    visible_cells = drone1.perceive_environment(grid)
-    agent_service.send_message(drone1, commander, visible_cells)
-    commander.update(service)
-    #print(commander.desires.get("fire_to_extinguish"))
-    #print(commander.beliefs)
+    # Overlay (mantém igual)
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-
-    for x, y, _ in visible_cells:
-        rect = pygame.Rect(
-            x * CELL_SIZE,
-            y * CELL_SIZE,
-            CELL_SIZE,
-            CELL_SIZE
-        )
-        pygame.draw.rect(overlay, (255, 255, 0, 50), rect)
+    for drone in commander.drones.values():
+        visible_cells = drone.perceive_environment(grid)
+        for x, y, _ in visible_cells:
+            rect = pygame.Rect(
+                x * CELL_SIZE,
+                y * CELL_SIZE,
+                CELL_SIZE,
+                CELL_SIZE
+            )
+            pygame.draw.rect(overlay, (255, 255, 0, 50), rect)
 
     screen.blit(overlay, (0, 0))
 
-    # Bombeiro
-    fx, fy = fire_fighter.get_position()
-    center_x = fx * CELL_SIZE + CELL_SIZE // 2
-    center_y = fy * CELL_SIZE + CELL_SIZE // 2
-    pygame.draw.circle(
-        screen,
-        (0, 255, 255),  # ciano
-        (center_x, center_y), # posição central
-        CELL_SIZE // 3 # raio do círculo
-    )
-
-    # Bombeiro 2
-    fx, fy = fire_fighter2.get_position()
-    center_x = fx * CELL_SIZE + CELL_SIZE // 2
-    center_y = fy * CELL_SIZE + CELL_SIZE // 2
-    pygame.draw.circle(
-        screen,
-        (0, 255, 255),  # ciano
-        (center_x, center_y), # posição central
-        CELL_SIZE // 3 # raio do círculo
-    )
-
-
-    # Bombeiro 3
-    fx, fy = fire_fighter3.get_position()
-    center_x = fx * CELL_SIZE + CELL_SIZE // 2
-    center_y = fy * CELL_SIZE + CELL_SIZE // 2
-    pygame.draw.circle(
-        screen,
-        (0, 255, 255),  # ciano
-        (center_x, center_y), # posição central
-        CELL_SIZE // 3 # raio do círculo
-    )
-
-    # Bombeiro 4
-    fx, fy = fire_fighter4.get_position()
-    center_x = fx * CELL_SIZE + CELL_SIZE // 2
-    center_y = fy * CELL_SIZE + CELL_SIZE // 2
-    pygame.draw.circle(
-        screen,
-        (0, 255, 255),  # ciano
-        (center_x, center_y), # posição central
-        CELL_SIZE // 3 # raio do círculo
-    )
-
-
-    # if commander.intentions.get("fire_to_extinguish"):
-    #     agent_service.send_message(commander, fire_fighter, commander.intentions.get("fire_to_extinguish")[0])
-    # if commander.intentions.get("victims_to_save"):
-    #     agent_service.send_message(commander, rescuer, commander.intentions.get("victims_to_save"))
-    # if commander.intentions.get("victims_to_save"):
-    #     agent_service.send_message(commander, rescuer_optimizer, commander.intentions.get("victims_to_save"))
+    # Bombeiros
+    for ff in [fire_fighter, fire_fighter2, fire_fighter3, fire_fighter4]:
+        fx, fy = ff.get_position()
+        draw_emoji(screen, "🧑‍🚒", fx, fy)
 
     # Socorrista
     rx, ry = rescuer.get_position()
-    center_x = rx * CELL_SIZE + CELL_SIZE // 2
-    center_y = ry * CELL_SIZE + CELL_SIZE // 2
-    pygame.draw.circle(
-        screen,
-        (255, 0, 255),  # magenta
-        (center_x, center_y), # posição central
-        CELL_SIZE // 3 # raio do círculo
-    )
+    draw_emoji(screen, "⛑️", rx, ry)
 
     # Otimizador
     rox, roy = rescuer_optimizer.get_position()
-    center_x = rox * CELL_SIZE + CELL_SIZE // 2
-    center_y = roy * CELL_SIZE + CELL_SIZE // 2
-    pygame.draw.circle(
-        screen,
-        (255, 165, 0),  # laranja
-        (center_x, center_y), # posição central
-        CELL_SIZE // 3 # raio do círculo
-    )
+    surface = emoji_font.render("🚑", True, (255,255,255))
+
+    if rescuer_optimizer.heading == "right":
+        surface = pygame.transform.flip(surface, True, False)
+    screen.blit(surface, (rox * CELL_SIZE, roy * CELL_SIZE))
+
+    # Hospital
+    hx, hy = hospital.get_position()
+    rect = pygame.Rect(
+                hx * CELL_SIZE,
+                hy * CELL_SIZE,
+                CELL_SIZE,
+                CELL_SIZE
+            )
+    pygame.draw.rect(screen, (255, 255, 255), rect)
+    draw_emoji(screen, "🏥", hx, hy)
+
     #funcionamento dos agentes
- 
-    #print(f'1:{fire_fighter.state} 2:{fire_fighter2.state}')
-    #print(f'1:{fire_fighter.target} 2:{fire_fighter2.target}')
-    #print(f'3:{fire_fighter3.state}')
-    #print(f'3:{fire_fighter3.target}')
-    #print(commander.victims_saved)
-    print(f"Rescuer: {rescuer.rescue_queue}")
-    print(f"Rescuer Optimizer: {rescuer_optimizer.rescue_queue}")
-
-    #print()
-    # rescuer.update(service)
-    # print(rescuer.status)
-    # print(rescuer.rescue_queue)
-    #print(rescuer.victims_rescued)
-    #print(commander.desires.get("victims_to_save"))
-    #print(commander.desires.get("fire_to_extinguish"))
-    #if rescuer.current_target is not None:
-        #print(rescuer.current_target[0], rescuer.current_target[1])
-
-    # socorrista otimizado
+    commander.update(service)
     metrics = metrics_tracker.snapshot(rescuer, rescuer_optimizer)
     draw_metrics_panel(screen, metrics, position=(10, 10))
 

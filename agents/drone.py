@@ -10,9 +10,6 @@ class Drone(BaseAgent):
         self.vert_dir = 1       # +1 desce, -1 sobe
         self.vert_steps_left = 0
 
-    def receive_message(self, message:str):
-        pass
-
     def perceive_environment(self, grid):
         '''
         Recebe o grid e retorna uma lista de células visíveis dentro do alcance de visão do drone.

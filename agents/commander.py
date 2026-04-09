@@ -15,9 +15,11 @@ class Commander(BaseAgent):
 
         self.firefighters = {} # registro dos bombeiros por quadrante
         self.rescuers = None
+        self.drones = {}
         self.extinguished_fires = []
         self.rescued_victims = []
         self.active_rescuer = "optimizer"
+        self.next_rescuer_turn = "sequential"
     
 
     # registros dos agentes bombeiros e socorristas
@@ -27,9 +29,12 @@ class Commander(BaseAgent):
     def register_rescuers(self, rescuer_sequential, rescuer_optimizer):
         self.rescuers = [rescuer_sequential, rescuer_optimizer]
 
+    def register_drones(self, drone):
+        self.drones[drone.id] = drone
+
     def set_active_rescuer(self, rescuer_mode: str):
         mode = str(rescuer_mode).strip().lower()
-        if mode in ("sequential", "optimizer"):
+        if mode in ("sequential", "optimizer","both"):
             self.active_rescuer = mode
 
 
@@ -118,7 +123,6 @@ class Commander(BaseAgent):
                     }
                 )
                 reserved_firefighters.add(idle_quadrant)
-                print(f"o bombeiro {idle_quadrant} tá relaxando")
     def _get_quadrant(self, x: int, y: int) -> int:
         half = self.grid_size // 2
         if x < half and y < half:
@@ -146,6 +150,29 @@ class Commander(BaseAgent):
                 "rescuer": "sequential",
                 "targets": victims
             })
+        elif self.active_rescuer == "both":
+            list_sequential = []
+            list_optimizer = []
+            for victim in victims:
+                if self.next_rescuer_turn == "sequential":
+                    list_sequential.append(victim)
+                    self.next_rescuer_turn = "optimizer"
+                else:
+                    list_optimizer.append(victim)
+                    self.next_rescuer_turn = "sequential"
+
+            if list_sequential:
+                self.intentions.append({
+                    "type": "RESCUE_VICTIMS",
+                    "rescuer": "sequential",
+                    "targets": list_sequential
+                })
+            if list_optimizer:
+                self.intentions.append({
+                    "type": "RESCUE_VICTIMS",
+                    "rescuer": "optimizer",
+                    "targets": list_optimizer
+                })
         else:
             self.intentions.append({
                 "type": "RESCUE_VICTIMS",
@@ -187,21 +214,21 @@ class Commander(BaseAgent):
 
     def execute_plan(self):
         """Envia comandos aos agentes com base nas intenções geradas."""
-        #print(f"Commander {self.id} executing plan with intentions: {self.intentions}")
+        
         for intention in self.intentions:
 
             if intention["type"] == "EXTINGUISH_FIRE":
                 quadrant = intention["firefighter"]
                 firefighter = self.firefighters.get(quadrant)
                 if firefighter:
-                    #print("fire of babylon")
+                    
                     firefighter.receive_message({
                         "type": "GO_EXTINGUISH",
                         "target": intention["targets"]
                     })
 
             elif intention["type"] == "RESCUE_VICTIMS":
-                #print("ajuda o maluco que tá doente")
+                
                 if intention["rescuer"] == "sequential" and len(self.rescuers) > 0:
                     self.rescuers[0].receive_message(intention["targets"])
                 elif intention["rescuer"] == "optimizer" and len(self.rescuers) > 1:
@@ -210,11 +237,11 @@ class Commander(BaseAgent):
 
     def update(self,service):
         """Ciclo BDI completo — chamar uma vez por tick."""
-        #print(f"Commander {self.id} updating beliefs, desires, intentions...")
-        #print(f"Current beliefs: {self.beliefs}")
-        #print(f"Current desires: {self.desires}")
-        #print(f"Current intentions: {self.intentions}")
         #verifica se os incêndios que ele tinha como desejo apagar já foram apagados, para atualizar as crenças e desejos.
+        for drone in self.drones.values():
+            drone.patrol(service.grid)
+            visible_cells = drone.perceive_environment(service.grid)
+            self.receive_message(visible_cells)
         for fire_fighter in self.firefighters.values():
             result = fire_fighter.update(service)
             if result is not None:
@@ -229,11 +256,5 @@ class Commander(BaseAgent):
         self.generate_desires()
         self._generate_intentions()
         self.execute_plan()
-
-
-    def plan_actions(self):            # Planeja ações específicas para alcançar as intenções (ex: escolher qual agente enviar)
-        pass
     
-    def perceive_environment(self, grid):
-        # O comandante pode ter uma visão limitada do ambiente, dependendo das informações recebidas dos drones
-        pass
+    

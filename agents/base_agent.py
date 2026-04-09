@@ -39,10 +39,8 @@ class BaseAgent(ABC):
         agent.receive_message(message)
 
 
-    @abstractmethod
     def receive_message(self):
         pass  # Implementar lógica de recepção de mensagens
 
-    @abstractmethod
     def perceive_environment(self):
         pass  # Implementar lógica de percepção do ambiente

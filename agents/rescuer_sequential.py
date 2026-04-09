@@ -51,7 +51,6 @@ class RescuerSequential(BaseAgent):
                     return None
 
                 tx, ty = self.current_target
-                print(f"Rescuer {self.id} moving towards victim at ({tx}, {ty})")
                 self.move_towards(tx, ty)
                 self.steps_taken += 1
 
@@ -98,10 +97,3 @@ class RescuerSequential(BaseAgent):
                 continue
             if victim not in self.rescue_queue:
                 self.rescue_queue.append(victim)
-        pass  # Implementar lógica de recepção de mensagens
-
-    def perceive_environment(self):
-        x, y = self.get_position()
-        state = grid.get_cell_state(x, y)
-        return (x, y, state)
-        pass  # Implementar lógica de percepção do ambiente

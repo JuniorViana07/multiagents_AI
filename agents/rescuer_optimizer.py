@@ -19,6 +19,7 @@ class RescuerOptimizer(BaseAgent):
         self.current_target = None
 
         self.status = "idle"
+        self.heading = 'right'
 
         self.carrying_victim = False
 
@@ -74,8 +75,11 @@ class RescuerOptimizer(BaseAgent):
                     return None
 
                 tx, ty = self.current_target
-                print(f"Rescuer {self.id} moving towards victim at ({tx}, {ty})")
                 self.move_towards(tx, ty)
+                if self.pos_x < tx: 
+                    self.heading = 'right'
+                elif self.pos_x > tx:
+                    self.heading = 'left'
                 self.steps_taken += 1
 
                 if self.pos_x == tx and self.pos_y == ty:
@@ -105,6 +109,10 @@ class RescuerOptimizer(BaseAgent):
                 hx, hy = self.hospital_pos
                 # funcao do agente socorrista(porenquanto)
                 self.move_towards(hx, hy)
+                if self.pos_x < hx: 
+                    self.heading = 'right'
+                elif self.pos_x > hx:
+                    self.heading = 'left'
                 self.steps_taken += 1
 
                 if self.pos_x == hx and self.pos_y == hy:
@@ -123,9 +131,3 @@ class RescuerOptimizer(BaseAgent):
             
             self.rescue_queue.append(victim)
             self.queued_victims.add(victim)
-
-    def perceive_environment(self):
-        x, y = self.get_position()
-        state = grid.get_cell_state(x, y)
-        return (x, y, state)
-        pass  # Implementar lógica de percepção do ambiente
