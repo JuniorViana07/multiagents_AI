@@ -26,21 +26,6 @@ class Firefighter(BaseAgent):
 
         self.target = new_target
 
-
-    def perceive_environment(self, grid):
-        # O bombeiro pode perceber apenas a célula em que está localizado
-        x, y = self.get_position()
-        state = grid.get_cell_state(x, y)
-        return (x, y, state)
-
-    def act(self, command:str):
-        # O bombeiro pode executar ações como "move_up", "move_down", "move_left", "move_right", "extinguish_fire"
-        # Na verdade não faz sentido o bombeiro receber as ações? sendo que ele recebe as coordenadas do fogo.
-        if self.state == 'idle' and command.startswith("extinguish_fire"):
-            self.state = 'extinguishing'
-            # lógica para extinguir o fogo na coordenada do target
-        pass
-
     # movimentação do bombeiro, o bombeiro deve se mover do ponto x,y atual para o ponto x,y do fogo:
     def update(self, grid_service):
         if self.target is None:

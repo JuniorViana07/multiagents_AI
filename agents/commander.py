@@ -19,6 +19,7 @@ class Commander(BaseAgent):
         self.extinguished_fires = []
         self.rescued_victims = []
         self.active_rescuer = "optimizer"
+        self.next_rescuer_turn = "sequential"
     
 
     # registros dos agentes bombeiros e socorristas
@@ -33,7 +34,7 @@ class Commander(BaseAgent):
 
     def set_active_rescuer(self, rescuer_mode: str):
         mode = str(rescuer_mode).strip().lower()
-        if mode in ("sequential", "optimizer"):
+        if mode in ("sequential", "optimizer","both"):
             self.active_rescuer = mode
 
 
@@ -149,6 +150,29 @@ class Commander(BaseAgent):
                 "rescuer": "sequential",
                 "targets": victims
             })
+        elif self.active_rescuer == "both":
+            list_sequential = []
+            list_optimizer = []
+            for victim in victims:
+                if self.next_rescuer_turn == "sequential":
+                    list_sequential.append(victim)
+                    self.next_rescuer_turn = "optimizer"
+                else:
+                    list_optimizer.append(victim)
+                    self.next_rescuer_turn = "sequential"
+
+            if list_sequential:
+                self.intentions.append({
+                    "type": "RESCUE_VICTIMS",
+                    "rescuer": "sequential",
+                    "targets": list_sequential
+                })
+            if list_optimizer:
+                self.intentions.append({
+                    "type": "RESCUE_VICTIMS",
+                    "rescuer": "optimizer",
+                    "targets": list_optimizer
+                })
         else:
             self.intentions.append({
                 "type": "RESCUE_VICTIMS",
@@ -232,11 +256,5 @@ class Commander(BaseAgent):
         self.generate_desires()
         self._generate_intentions()
         self.execute_plan()
-
-
-    def plan_actions(self):            # Planeja ações específicas para alcançar as intenções (ex: escolher qual agente enviar)
-        pass
     
-    def perceive_environment(self, grid):
-        # O comandante pode ter uma visão limitada do ambiente, dependendo das informações recebidas dos drones
-        pass
+    
