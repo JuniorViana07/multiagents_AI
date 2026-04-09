@@ -137,24 +137,31 @@ while running:
     # Desenho
     screen.fill((0, 0, 0))
 
+    grid_overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+
     # Desenha a grid
     for y in range(grid.get_size()):
         for x in range(grid.get_size()):
             state = grid.get_cell_state(x, y)
+
             rect = pygame.Rect(
-                    x * CELL_SIZE,
-                    y * CELL_SIZE,
-                    CELL_SIZE,
-                    CELL_SIZE
-                )
+                x * CELL_SIZE,
+                y * CELL_SIZE,
+                CELL_SIZE,
+                CELL_SIZE
+            )
+
+            pygame.draw.rect(screen, (255, 255, 255), rect)
+
             if state != CellState.NORMAL:
                 emoji = EMOJIS[state]
-                pygame.draw.rect(screen, (255, 255, 255), rect)
                 draw_emoji(screen, emoji, x, y)
-            else:
-                pygame.draw.rect(screen, (255, 255, 255), rect)
-            #pygame.draw.rect(screen, color, rect)
-            #pygame.draw.rect(screen, (50, 50, 50), rect, 1)  # grid
+
+            # Borda com transparência
+            pygame.draw.rect(grid_overlay, (50, 50, 50, 80), rect, 1)
+
+    # aplica transparência
+    screen.blit(grid_overlay, (0, 0))
 
     ### Desenhando agentes
     # Drone
