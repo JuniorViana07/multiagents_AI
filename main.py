@@ -42,7 +42,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("City Grid Simulation")
 clock = pygame.time.Clock()
 
-
+#funções auxiliares
 def _scaled_coord(ratio: float) -> int:
     value = int(round((GRID_SIZE - 1) * ratio))
     return max(0, min(GRID_SIZE - 1, value))
@@ -51,7 +51,7 @@ def _scaled_coord(ratio: float) -> int:
 def _scaled_pos(x_ratio: float, y_ratio: float) -> tuple[int, int]:
     return (_scaled_coord(x_ratio), _scaled_coord(y_ratio))
 
-# Instâncias
+# Instânciando
 grid = CityGrid(GRID_SIZE)
 fire_w, victim_w, fire_victim_w = normalized_event_weights()
 service = CityGridService(
@@ -63,6 +63,7 @@ service = CityGridService(
 )
 agent_service = AgentService()
 hospital = Hospital(GRID_SIZE//2, GRID_SIZE//2)
+
 # Inicializando agentes
 drone_x, drone_y = _scaled_pos(0.25, 0.25)
 drone1 = Drone(id=1, pos_x=drone_x, pos_y=drone_y, view_range=2)
@@ -80,6 +81,7 @@ fire_fighter3 = Firefighter(id=7, pos_x=ff3_x, pos_y=ff3_y, quadrant=2)
 fire_fighter4 = Firefighter(id=8, pos_x=ff4_x, pos_y=ff4_y, quadrant=4)
 rescuer = RescuerSequential(id=4, pos_x=resc_seq_x, pos_y=resc_seq_y, hospital_pos=hospital.get_position())
 rescuer_optimizer = RescuerOptimizer(id=5, pos_x=resc_opt_x, pos_y=resc_opt_y, hospital_pos=hospital.get_position())
+commander.register_drones(drone1)
 commander.register_firefighter(1, fire_fighter)
 commander.register_firefighter(2, fire_fighter3)
 commander.register_firefighter(3, fire_fighter2)
@@ -155,41 +157,17 @@ while running:
         (center_x, center_y), # posição central
         CELL_SIZE // 3 # raio do círculo
     )
-
-    # update nos bombeiros:
-    #result = fire_fighter.update(service)
-    #if result is not None:
-    #    commander.register_extinguished_fire(result)
-    #
-    #result = fire_fighter2.update(service)
-    #if result is not None:
-    #    commander.register_extinguished_fire(result)
-
-    #result = fire_fighter3.update(service)
-    #if result is not None:
-    #    commander.register_extinguished_fire(result)
-
-    #result = fire_fighter4.update(service)
-    #if result is not None:
-    #    commander.register_extinguished_fire(result)
-
-    # Campo de visão do drone
-    drone1.patrol(grid)
-    visible_cells = drone1.perceive_environment(grid)
-    agent_service.send_message(drone1, commander, visible_cells)
-    commander.update(service)
-    #print(commander.desires.get("fire_to_extinguish"))
-    #print(commander.beliefs)
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-
-    for x, y, _ in visible_cells:
-        rect = pygame.Rect(
-            x * CELL_SIZE,
-            y * CELL_SIZE,
-            CELL_SIZE,
-            CELL_SIZE
-        )
-        pygame.draw.rect(overlay, (255, 255, 0, 50), rect)
+    for drone in commander.drones.values():
+        visible_cells = drone.perceive_environment(grid)
+        for x, y, _ in visible_cells:
+            rect = pygame.Rect(
+                x * CELL_SIZE,
+                y * CELL_SIZE,
+                CELL_SIZE,
+                CELL_SIZE
+            )
+            pygame.draw.rect(overlay, (255, 255, 0, 50), rect)
 
     screen.blit(overlay, (0, 0))
 
@@ -238,14 +216,6 @@ while running:
         CELL_SIZE // 3 # raio do círculo
     )
 
-
-    # if commander.intentions.get("fire_to_extinguish"):
-    #     agent_service.send_message(commander, fire_fighter, commander.intentions.get("fire_to_extinguish")[0])
-    # if commander.intentions.get("victims_to_save"):
-    #     agent_service.send_message(commander, rescuer, commander.intentions.get("victims_to_save"))
-    # if commander.intentions.get("victims_to_save"):
-    #     agent_service.send_message(commander, rescuer_optimizer, commander.intentions.get("victims_to_save"))
-
     # Socorrista
     rx, ry = rescuer.get_position()
     center_x = rx * CELL_SIZE + CELL_SIZE // 2
@@ -267,27 +237,9 @@ while running:
         (center_x, center_y), # posição central
         CELL_SIZE // 3 # raio do círculo
     )
+
     #funcionamento dos agentes
- 
-    #print(f'1:{fire_fighter.state} 2:{fire_fighter2.state}')
-    #print(f'1:{fire_fighter.target} 2:{fire_fighter2.target}')
-    #print(f'3:{fire_fighter3.state}')
-    #print(f'3:{fire_fighter3.target}')
-    #print(commander.victims_saved)
-    print(f"Rescuer: {rescuer.rescue_queue}")
-    print(f"Rescuer Optimizer: {rescuer_optimizer.rescue_queue}")
-
-    #print()
-    # rescuer.update(service)
-    # print(rescuer.status)
-    # print(rescuer.rescue_queue)
-    #print(rescuer.victims_rescued)
-    #print(commander.desires.get("victims_to_save"))
-    #print(commander.desires.get("fire_to_extinguish"))
-    #if rescuer.current_target is not None:
-        #print(rescuer.current_target[0], rescuer.current_target[1])
-
-    # socorrista otimizado
+    commander.update(service)
     metrics = metrics_tracker.snapshot(rescuer, rescuer_optimizer)
     draw_metrics_panel(screen, metrics, position=(10, 10))
 

@@ -15,6 +15,7 @@ class Commander(BaseAgent):
 
         self.firefighters = {} # registro dos bombeiros por quadrante
         self.rescuers = None
+        self.drones = {}
         self.extinguished_fires = []
         self.rescued_victims = []
         self.active_rescuer = "optimizer"
@@ -26,6 +27,9 @@ class Commander(BaseAgent):
 
     def register_rescuers(self, rescuer_sequential, rescuer_optimizer):
         self.rescuers = [rescuer_sequential, rescuer_optimizer]
+
+    def register_drones(self, drone):
+        self.drones[drone.id] = drone
 
     def set_active_rescuer(self, rescuer_mode: str):
         mode = str(rescuer_mode).strip().lower()
@@ -215,6 +219,10 @@ class Commander(BaseAgent):
         #print(f"Current desires: {self.desires}")
         #print(f"Current intentions: {self.intentions}")
         #verifica se os incêndios que ele tinha como desejo apagar já foram apagados, para atualizar as crenças e desejos.
+        for drone in self.drones.values():
+            drone.patrol(service.grid)
+            visible_cells = drone.perceive_environment(service.grid)
+            self.receive_message(visible_cells)
         for fire_fighter in self.firefighters.values():
             result = fire_fighter.update(service)
             if result is not None:
